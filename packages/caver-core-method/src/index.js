@@ -338,12 +338,89 @@ const buildSendRequestFunc = (defer, sendSignedTx, sendTxCallback) => (payload, 
                 if (wallet && wallet.privateKey) {
                     const privateKey = method.accounts._getRoleKey(tx, wallet)
                     // If wallet was found, sign tx, and send using sendRawTransaction
-                    return method.accounts
-                        .signTransaction(tx, privateKey)
-                        .then(sendSignedTx)
-                        .catch(e => {
-                            sendTxCallback(e)
-                        })
+                    if ((wallet.accountKey || {}).type === "AccountKeyMultiSig") {
+                      const keys = (wallet.accountKey || {})._keys
+                      let lastSign
+                      switch(keys.length) {
+                        case 4:
+                          return method.accounts.signTransaction(tx, keys[0])
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[1])
+                            })
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[2])
+                            })
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[3])
+                            })
+                            .then(sendSignedTx)
+                            .catch(e => {
+                                sendTxCallback(e)
+                            })
+                        case 3:
+                          return method.accounts.signTransaction(tx, keys[0])
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[1])
+                            })
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[2])
+                            })
+                            .then(sendSignedTx)
+                            .catch(e => {
+                                sendTxCallback(e)
+                            })
+                        case 2:
+                          return method.accounts
+                            .signTransaction(tx, keys[0])
+                            .then(data => {
+                              lastSign = data
+                              return true
+                            })
+                            .then(() => {
+                              return method.accounts.signTransaction(lastSign.rawTransaction, keys[1])
+                            })
+                            .then(sendSignedTx)
+                            .catch(e => {
+                                sendTxCallback(e)
+                            })
+                        case 1:
+                        default:
+                          return method.accounts
+                            .signTransaction(tx, privateKey)
+                            .then(sendSignedTx)
+                            .catch(e => {
+                                sendTxCallback(e)
+                            })
+                      }
+
+                    } else {
+                      return method.accounts
+                          .signTransaction(tx, privateKey)
+                          .then(sendSignedTx)
+                          .catch(e => {
+                              sendTxCallback(e)
+                          })
+                    }
                 }
                 if (tx.signatures) {
                     // If signatures is defined inside of the transaction object,

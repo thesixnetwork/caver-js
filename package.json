@@ -1,5 +1,5 @@
 {
-  "name": "caver-js",
+  "name": "six-caver-js",
   "version": "1.4.1",
   "description": "caver-js is a JavaScript API library that allows developers to interact with a Klaytn node",
   "main": "index.js",
